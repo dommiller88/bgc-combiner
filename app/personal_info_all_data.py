@@ -6,14 +6,10 @@
 #4. combine
 import pandas as pd
 import os
-import click
 from datetime import datetime
 import sys
 
-@click.command()
-@click.argument('pth_out')
-def main(pth_out):
-    pth_in = click.prompt("\n--------------------------------------------------\nenter path to child and family data input folder")
+def main(pth_in, pth_out):
     frames = []
     for filename in os.listdir(pth_in):
         print(filename)

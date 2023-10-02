@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import click
 from datetime import datetime, timedelta
 
 cal = {
@@ -131,11 +130,7 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
         
     
 
-@click.command()
-@click.argument('pth_out')
-@click.option('--c')
-def main(pth_out, c):
-    pth_in = click.prompt("\n--------------------------------------------------\nenter path to attendance data input folder")
+def main(pth_in, pth_out, c):
     frames = []
     for filename in os.listdir(pth_in):
         if ".xlsx" in filename:
