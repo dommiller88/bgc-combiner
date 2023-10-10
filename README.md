@@ -1,5 +1,5 @@
-ombine
 
+# BGCombine
 BGC Combiner is a tool for transforming and combining data from ProCare.  This can be used for individual reports, aggregate ADA data, and concatenating aggregate data on to existing documents.
 
 ## Installation
