@@ -130,7 +130,7 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
         
     
 
-def main(pth_in, pth_out, pth_filter, c):
+def main(pth_in, pth_out, filtered, c):
     frames = []
     for filename in os.listdir(pth_in):
         if ".xlsx" in filename:
@@ -192,10 +192,10 @@ def main(pth_in, pth_out, pth_filter, c):
             df.insert(5, "Duplicate", dup_check)
 
             #Add is_active
-            df_filter = pd.read_excel(pth_filter)
-            # print(df_filter['IdXSite'])
-            # print(df['IdXSite'])
-            is_active = df.apply(lambda x: df_filter['IdXSite'].str.contains(x['IdXSite']).any(), axis=1)
+            is_active = pd.Series()
+            if filtered:
+                df_filter = pd.read_excel(filtered)
+                is_active = df.apply(lambda x: df_filter['IdXSite'].str.contains(x['IdXSite']).any(), axis=1)
             df.insert(5, 'is_active', is_active)
             
             frames.append(df)
