@@ -164,7 +164,7 @@ def main(pth_in, pth_out, filtered, c):
             
             #Counting days attended
             df_for_counting = get_df_for_counting(df)
-            cnt = (df_for_counting.count(axis=1) - 1)
+            cnt = (df_for_counting.count(axis=1))
             cnt = cnt.clip(0)
             df.insert(5, "Days Attended", cnt)
             
