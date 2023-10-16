@@ -10,6 +10,8 @@ from datetime import datetime
 import sys
 
 def main(pth_in, pth_out):
+    if not pth_out:
+        pth_out = os.getcwd()
     frames = []
     for filename in os.listdir(pth_in):
         print(filename)

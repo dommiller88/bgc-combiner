@@ -131,6 +131,8 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
     
 
 def main(pth_in, pth_out, filtered, c):
+    if not pth_out:
+        pth_out = os.getcwd()
     frames = []
     for filename in os.listdir(pth_in):
         if ".xlsx" in filename:
