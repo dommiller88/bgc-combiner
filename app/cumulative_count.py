@@ -33,7 +33,7 @@ def calc_age(is_term_1, is_summer, dob):
     else:
         return relativedelta(datetime(2023, 9, 30), true_dob).years
 
-def main(pth_in, pth_out):
+def main(pth_in, pth_out, show_blacklist):
     if not pth_out:
         pth_out = os.getcwd()
     df = pd.read_excel(pth_in)
@@ -88,7 +88,12 @@ def main(pth_in, pth_out):
     pprint(unit_dict)
     print(f'\nTotal: {counted_students}')
 
-    #TODO: add show_blacklist option
+    if show_blacklist:
+        print('Members not shown: \n')
+        pprint(unsorted)
+        unsorted = pd.Series(unsorted)
+        unsorted.to_excel(f'{pth_out}/blacklist_{datetime.now()}.xlsx')
+
 
     
 
