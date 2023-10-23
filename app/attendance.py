@@ -70,7 +70,9 @@ def generate_ADA(df, pth_in, pth_out):
                     max_day = num
                 if num < min_day:
                     min_day = num
-        ada = cumulative / (len(days.columns) - off_days)
+        ada = 0
+        if len(days.columns) - off_days > 0:
+            ada = cumulative / (len(days.columns) - off_days)
         data = {
             'Site': [group],
             'ADA': [ada],

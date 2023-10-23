@@ -30,7 +30,7 @@ bgcombine enrollment --o ~/output
 Enrollment is used for getting the number of enrolled students by site for each site.  Any vision file may be used for this as long as it includes the fields Unit Code and Membership Number. Results are output to the console. If an output path is specified, the result will also be output to an Excel spreadsheet in the intended location.
 #### Cumulative
 ```bash
-bgcombine cumulative --o ~/output
+bgcombine cumulative --o ~/output --blacklist
 ```
 Cumulative is used for getting a cumulative count of students (by site and total) across a given time frame.  It is designed to be used with Vision data containing "Member Full Name", Membership Number, and All Groups.  The program prints individual unit counts for both general studetns and teen students to the console along with total counts for both of those categories.  In addition, information on both general students and teens will be outputted to an Excel file, including which term the students last attended for as well as the specific location and program of that attendance.  If no output path is specified, the current working directory will be used.
 
@@ -49,6 +49,8 @@ The repository for combined output files. Do not specify a file name at this tim
 Concatenate is an option used to append ADA data to an existing document along with datestamps of when that info was generated.  Its argument is the path to the file that should be concatenated.
 #### Filtered (--filtered)
 Filtered is an option to use a site data file created with command Info as a filter on procare data.  It will populate the "is_active" field with true or false values based on if the students in the attendance file exist in the given site data file.
+#### Output Unsorted Members (--blacklist)
+Option for use in the cumulative command.  List of unsorted members will be output to console and to a file in the specified output directory.
 
 ## Note to Developers
 Some portions of these programs may need to be amended as file types shift.  The most notable change will be to the cumulative.py file.  The start and end dates of terms are hard-coded in such as in: 
