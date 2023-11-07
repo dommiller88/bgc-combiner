@@ -24,7 +24,7 @@ def get_df_for_counting(df):
     return df_for_counting
 
 def read_dates(pth_in):
-    date_info = pd.read_excel(f'{pth_in}/{os.listdir(pth_in)[1]}', engine='openpyxl')
+    date_info = pd.read_excel(f'{pth_in}/{os.listdir(pth_in)[0]}', engine='openpyxl')
     date_ = date_info.columns[0]
     date_ = date_.split('for')[1].split('-')
     date1 = date_[0].strip().split(' ')
@@ -125,7 +125,10 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
     to_concat = pd.concat(frames)
     to_concat = to_concat.reset_index()
     prev_doc = pd.read_excel(c).reset_index(drop=True)
-    final = pd.concat([prev_doc, to_concat]).reset_index(drop=True).to_excel(c, index=False)
+    print(prev_doc.dtypes)
+    print(to_concat.dtypes)
+    to_concat.to_excel('~/stupid.xlsx', index=False)
+    final = pd.concat([prev_doc, to_concat.astype(prev_doc.dtypes)], axis=0).to_excel(c, index=False)
     
     
 
@@ -203,6 +206,10 @@ def main(pth_in, pth_out, filtered, c):
             df.insert(5, 'is_active', is_active)
             
             frames.append(df)
+    print(len(frames))
+    # if len(frames) == 1:
+    #     combined = frames[0]
+    # else:
     combined = pd.concat(frames)
     
     
