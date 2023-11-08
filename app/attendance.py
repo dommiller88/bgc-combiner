@@ -45,9 +45,12 @@ def elapsed_business_days(date1, date2):
         total_days = total_days + 1
     return total_days
 
-def generate_ADA(df, pth_in, pth_out):
+def generate_ADA(df, pth_in, pth_out, am):
     dates = read_dates(pth_in)
-    df2 = df.loc[df['is_am'] == False]
+    if am:
+        df2 = df
+    else:
+        df2 = df.loc[df['is_am'] == False]
     df2 = df2.drop_duplicates(subset=['IdXSite'])
     df2_splitter = df2.groupby(['Site'])
     ada_frames = []
@@ -60,10 +63,19 @@ def generate_ADA(df, pth_in, pth_out):
         off_days = 0
         indiv_days = []
         for i in range(len(days.columns)):
-            if len(days[days.columns[i]].value_counts()) == 0:
+            print(cur['Site'].iloc[0])
+            print(days.columns[i])
+            if am and days[days.columns[i]].astype(str).str.count('AM').sum() == 0:
+                print('off day found')
+                off_days = off_days + 1
+            elif len(days[days.columns[i]].value_counts()) == 0:
                 off_days = off_days + 1
             else:
-                num = days[days.columns[i]].count()
+                if am:
+                    num = days[days.columns[i]].astype(str).str.count('AM').sum()
+                    print(num)
+                else:
+                    num = days[days.columns[i]].count()
                 cumulative = cumulative + num
                 indiv_days.append(num)
                 if num > max_day:
@@ -127,7 +139,6 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
     prev_doc = pd.read_excel(c).reset_index(drop=True)
     print(prev_doc.dtypes)
     print(to_concat.dtypes)
-    to_concat.to_excel('~/stupid.xlsx', index=False)
     final = pd.concat([prev_doc, to_concat.astype(prev_doc.dtypes)], axis=0).to_excel(c, index=False)
     
     
@@ -135,7 +146,7 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
         
     
 
-def main(pth_in, pth_out, filtered, c):
+def main(pth_in, pth_out, filtered, c, am):
     if not pth_out:
         pth_out = os.getcwd()
     frames = []
@@ -214,7 +225,7 @@ def main(pth_in, pth_out, filtered, c):
     
     
     combined.sort_values(by=['Site', 'First Name']).to_excel(f"{pth_out}/attendance_data_combined-{datetime.today()}.xlsx", index=False)
-    ada = generate_ADA(combined, pth_in, pth_out)
+    ada = generate_ADA(combined, pth_in, pth_out, am)
     ada[0].to_excel(ada[1])
     if c:
         generate_weekly_ADA(combined, pth_in, pth_out, c)

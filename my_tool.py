@@ -10,15 +10,16 @@ import app.cumulative_count as cumulative_count
 @click.option('--c')
 @click.option('--filtered')
 @click.option('--blacklist', is_flag=True)
+@click.option('--am', is_flag=True)
 @click.version_option('1.0.10')
-def main(mode, o, c, filtered, blacklist):
+def main(mode, o, c, filtered, blacklist, am):
     match mode:
         case 'info':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to child and family data input folder")
             info.main(pth_in, o)
         case 'attendance':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to attendance data input folder")
-            attendance.main(pth_in, o, filtered, c)
+            attendance.main(pth_in, o, filtered, c, am)
         case 'enrollment':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to enrollment student list file")
             enrollment.main(pth_in, o)
