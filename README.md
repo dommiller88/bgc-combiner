@@ -1,6 +1,6 @@
 
 # BGCombine
-BGCombine is a tool for transforming and combining data from ProCare.  This can be used for individual reports, aggregate ADA data, and concatenating aggregate data on to existing documents.
+BGCombine is a tool for transforming and combining data from ProCare and Vision.  This can be used for individual reports, aggregate ADA data, and concatenating aggregate data on to existing documents as well as for monthly Lily cumulative enrollment counts.
 
 ## Installation
 
@@ -10,7 +10,7 @@ You will need to be sure that you have installed Python.
 ## Usage
 In general, the tools will use pattern
 ```bash
-bgcombine <command> [--o <output_path> --c <path_to_concatenate> --filtered <path_to_children_and_family_data>]
+bgcombine <command> [--o <output_path> [other_options...]]
 ```
 ### Commands
 #### Info
@@ -20,7 +20,7 @@ bgcombine info --o ~/output
 Info is used for combining student and family data from ProCare (in the "all format"). It will also create an IdXSite field for unique multi-site identification along with the name of the site for each student. The function **requires** all source files to be prefixed with the site number. E.g. "101monthly_attendance_data" for the O.C. If no output path is specified, the current working directory will be used.
 #### Attendance
 ```bash
-bgcombine attendance --o ~/output --c ~/Documents/concat_doc.xlsx --filtered ~/Documents/info_data_2023.xlsx
+bgcombine attendance --o ~/output --c ~/Documents/concat_doc.xlsx --filtered ~/Documents/info_data_2023.xlsx --am
 ```
 Attendance is used for combining attendance data from ProCare. It will create a by-student attendance count as well as a duplicated check, along with the IdXSite field for multi-site identification.  Attendance also generates an ADA report and can be combined with the --c option to concatenate that information onto an existing historical data document.  If no output path is specified, the current working directory will be used.
 #### Enrollment
@@ -43,14 +43,16 @@ Enter path to input folder:
 User should input the **absolute** path to a directory that holds all of the ProCare files for the intended operation.
 
 ### Options
-#### Output Path (--o)
-The repository for combined output files. Do not specify a file name at this time.
+#### Before-Care Only (--am)
+Option used for attendance command.  By default, before-care only members are not included in ADA.  This flag can be used to get ADA specifically for before-care.
+#### Output Unsorted Members (--blacklist)
+Option for use in the cumulative command.  List of unsorted members will be output to console and to a file in the specified output directory.
 #### Concatenate (--c)
 Concatenate is an option used to append ADA data to an existing document along with datestamps of when that info was generated.  Its argument is the path to the file that should be concatenated.
 #### Filtered (--filtered)
 Filtered is an option to use a site data file created with command Info as a filter on procare data.  It will populate the "is_active" field with true or false values based on if the students in the attendance file exist in the given site data file.
-#### Output Unsorted Members (--blacklist)
-Option for use in the cumulative command.  List of unsorted members will be output to console and to a file in the specified output directory.
+#### Output Path (--o)
+The repository for combined output files. Do not specify a file name at this time.
 
 ## Note to Developers
 Some portions of these programs may need to be amended as file types shift.  The most notable change will be to the cumulative.py file.  The start and end dates of terms are hard-coded in such as in: 
@@ -69,11 +71,11 @@ def is_teen(is_term_1, is_summer, dob):
 (similar code in the get_age function) 
 The dates in the datetime objects will need to be amended.
 
-Another amendment will be the blacklists, defined at the top of both general counting and teen counting code blocks:
+Another amendment will be the list of units for cumulative count, defined at the beginning of the main function.
 ```python
- blacklist = ['000', '503', '205', '204', '411', '309']
+ units = ['101', '102', '110', '201', '202', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '601', '602', '603', '701', '503', '205', '411']
 ```
-The unit codes of discluded units must be kept up to date, because the entire count hinges on these blacklists.
+The unit codes of included units must be kept up to date, because the entire count hinges on which sites should be counted.
 
 ## License
 
