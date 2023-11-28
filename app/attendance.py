@@ -101,7 +101,7 @@ def generate_ADA(df, pth_in, pth_out, am):
     exp = (complete, exp_filename)
     return exp
 
-def generate_weekly_ADA(df, pth_in, pth_out, c):
+def generate_weekly_ADA(df, pth_in, pth_out, c, am):
     #make sure that data begins on a monday
     dates = read_dates(pth_in)
     base_cols = df.loc[:, :'Tags']
@@ -128,7 +128,7 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
         to_join = df_complete_weeks.loc[:, mondays[i]:sundays[i]]
         to_join = to_join.reset_index(drop=True)
         cur = base_cols.join(to_join)
-        cur_ada = generate_ADA(cur, pth_in, pth_out)[0]
+        cur_ada = generate_ADA(cur, pth_in, pth_out, am)[0]
 
         #take std deviation off and add date
         cur_ada = cur_ada.drop(columns=['ADA_Std_Dev'])
@@ -140,11 +140,12 @@ def generate_weekly_ADA(df, pth_in, pth_out, c):
     print(prev_doc.dtypes)
     print(to_concat.dtypes)
     final = pd.concat([prev_doc, to_concat.astype(prev_doc.dtypes)], axis=0).to_excel(c, index=False)
-    
-    
 
-        
-    
+def count_zeroes(df, pth_in, pth_out):
+    dates = read_dates(pth_in)
+    zero_cnt = df.loc[df['Days Attended'] == 0, :'Tags']
+    zero_cnt['Date'] = dates[0]
+    zero_cnt.sort_values('Site').to_excel(f'{pth_out}/zero_attendance-{dates[0]}-{dates[1]}.xlsx', index=False)
 
 def main(pth_in, pth_out, filtered, c, am):
     if not pth_out:
@@ -228,7 +229,8 @@ def main(pth_in, pth_out, filtered, c, am):
     ada = generate_ADA(combined, pth_in, pth_out, am)
     ada[0].to_excel(ada[1])
     if c:
-        generate_weekly_ADA(combined, pth_in, pth_out, c)
+        generate_weekly_ADA(combined, pth_in, pth_out, c, am)
+    count_zeroes(combined, pth_in, pth_out)
 
 
 if __name__ == "__main__":

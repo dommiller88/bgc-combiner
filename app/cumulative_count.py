@@ -135,7 +135,7 @@ def main(pth_in, pth_out, show_blacklist):
 
     print(f'\nCount by site:\n\n')
     pprint(unit_dict)
-    print(f'\nTotal: {counted_students}')
+    print(f'\nTotal: {counted_students}') 
 
     if show_blacklist:
         print('Members not shown: \n')
