@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
+import re
 
 cal = {
     "January": "01",
@@ -18,12 +19,16 @@ cal = {
 }
 
 def get_df_for_counting(df):
+    #Remove all columns other than Those to the right of Tags
     df_for_counting = df.loc[:, 'Tags':]
     df_for_counting = df_for_counting.drop(columns=['Tags'])
+
+    #Select alternating columns to eliminate the "out" columns
     df_for_counting = df_for_counting.loc[:, ::2]
     return df_for_counting
 
 def read_dates(pth_in):
+    #Read source file and parce dates out of row 1
     date_info = pd.read_excel(f'{pth_in}/{os.listdir(pth_in)[0]}', engine='openpyxl')
     date_ = date_info.columns[0]
     date_ = date_.split('for')[1].split('-')
@@ -34,28 +39,26 @@ def read_dates(pth_in):
     date2 = datetime.fromisoformat(f"{int(date2[2])}-{cal[date2[1].strip(',')]}-{date2[0]}")
     return (date1, date2)
 
-def elapsed_business_days(date1, date2):
-    # generating dates
-    dates = (date1 + timedelta(idx + 1)
-            for idx in range((date2 - date1).days))
-    
-    # summing all weekdays
-    total_days = sum(1 for day in dates if day.weekday() < 5)
-    if date2.weekday() < 5:
-        total_days = total_days + 1
-    return total_days
-
 def generate_ADA(df, pth_in, pth_out, am):
     dates = read_dates(pth_in)
+    #filter out am columns or non-am columns based on options passed
     if am:
         df2 = df
     else:
         df2 = df.loc[df['is_am'] == False]
+
+    #Split rows into groups by Site
     df2 = df2.drop_duplicates(subset=['IdXSite'])
     df2_splitter = df2.groupby(['Site'])
     ada_frames = []
     for group in df2_splitter.groups:
         cur = df2_splitter.get_group(group)
+
+        #Calculate average duration of stay
+        minute_count_df = cur.loc[cur['Average Time In'] != 0]
+        minute_avg = minute_count_df['Average Time In'].mean()
+
+
         days = get_df_for_counting(cur)
         cumulative = 0
         max_day = 0
@@ -63,14 +66,13 @@ def generate_ADA(df, pth_in, pth_out, am):
         off_days = 0
         indiv_days = []
         for i in range(len(days.columns)):
-            print(cur['Site'].iloc[0])
-            print(days.columns[i])
+            #Account for vacation days
             if am and days[days.columns[i]].astype(str).str.count('AM').sum() == 0:
-                print('off day found')
                 off_days = off_days + 1
             elif len(days[days.columns[i]].value_counts()) == 0:
                 off_days = off_days + 1
             else:
+                #Add attendance for day to cumulative period total
                 if am:
                     num = days[days.columns[i]].astype(str).str.count('AM').sum()
                     print(num)
@@ -78,6 +80,7 @@ def generate_ADA(df, pth_in, pth_out, am):
                     num = days[days.columns[i]].count()
                 cumulative = cumulative + num
                 indiv_days.append(num)
+                #Check to see if current day is min or max of period total.
                 if num > max_day:
                     max_day = num
                 if num < min_day:
@@ -85,12 +88,15 @@ def generate_ADA(df, pth_in, pth_out, am):
         ada = 0
         if len(days.columns) - off_days > 0:
             ada = cumulative / (len(days.columns) - off_days)
+        
+        #Create df from current group and append to combined ADA df.
         data = {
             'Site': [group],
             'ADA': [ada],
             'Max': [max_day],
             'Min': [min_day],
-            'ADA_Std_Dev': [pd.Series(indiv_days).std()]
+            'ADA_Std_Dev': [pd.Series(indiv_days).std()],
+            'Average Time In': [minute_avg]
         }
         temp_df = pd.DataFrame(data=data)
         temp_df.set_index('Site', inplace=True)
@@ -140,6 +146,48 @@ def generate_weekly_ADA(df, pth_in, pth_out, c, am):
     print(prev_doc.dtypes)
     print(to_concat.dtypes)
     final = pd.concat([prev_doc, to_concat.astype(prev_doc.dtypes)], axis=0).to_excel(c, index=False)
+
+def extract_time_from_string(input_string):
+    # Define a regular expression pattern to match the time
+    time_pattern = re.compile(r'\b(\d{1,2}:\d{2}(?: [APMapm]+)?)\b')
+
+    # Search for the pattern in the input string
+    if type(input_string) == str:
+        match = time_pattern.search(input_string)
+    else:
+        return None
+
+    if match:
+        # Extract the matched time and parse it into a datetime object
+        matched_time = match.group(1)
+        parsed_time = datetime.strptime(matched_time, '%I:%M %p')  # Adjust the format if needed
+        return parsed_time
+    else:
+        return None  # Return None if no time is found in the string
+
+def time_elapse(row):
+    total_mins = 0
+    day_count = 0
+    for i in range(0, len(row), 2):
+        print(row.iloc[i])
+        time_in = extract_time_from_string(row.iloc[i])
+        time_out = extract_time_from_string(row.iloc[i + 1])
+        if time_in and time_out:
+            day_count += 1
+            delta = time_out - time_in
+            total_mins += delta.seconds / 60
+    if day_count == 0:
+        return 0
+    else:
+        return total_mins / day_count
+
+
+
+def average_time_in(df):
+    df_for_counting = df.loc[:, 'Tags':]
+    df_for_counting = df_for_counting.drop(columns=['Tags'])
+    df_for_counting['Average Time In'] = df_for_counting.apply(lambda x: time_elapse(x), axis=1)
+    return df_for_counting['Average Time In']
 
 def count_zeroes(df, pth_in, pth_out):
     dates = read_dates(pth_in)
@@ -224,7 +272,7 @@ def main(pth_in, pth_out, filtered, c, am):
     # else:
     combined = pd.concat(frames)
     
-    
+    combined.insert(5, 'Average Time In', average_time_in(combined))
     combined.sort_values(by=['Site', 'First Name']).to_excel(f"{pth_out}/attendance_data_combined-{datetime.today()}.xlsx", index=False)
     ada = generate_ADA(combined, pth_in, pth_out, am)
     ada[0].to_excel(ada[1])
