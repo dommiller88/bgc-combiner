@@ -23,12 +23,13 @@ def is_teen(is_term_1, is_summer, dob):
     if pd.isnull(dob):
         return 0
     true_dob = datetime.strptime(str(dob), "%Y-%m-%d %H:%M:%S")
-    if is_term_1 == 1:
-        return 1 if relativedelta(datetime(2023, 5, 26), true_dob).years >= 13 and relativedelta(datetime(2023, 5, 26), true_dob).years < 20 else 0
-    elif is_summer == 1:
-        return 1 if relativedelta(datetime(2023, 7, 21), true_dob).years >= 13 and relativedelta(datetime(2023, 7, 21), true_dob).years < 20 else 0
-    else:
-        return 1 if relativedelta(get_last_day(date.today()), true_dob).years >= 13 and relativedelta(get_last_day(date.today()), true_dob).years < 20 else 0
+    return 1 if relativedelta(get_last_day(date.today()), true_dob).years >= 13 and relativedelta(get_last_day(date.today()), true_dob).years < 20 else 0
+    # if is_term_1 == 1:
+    #     return 1 if relativedelta(datetime(2023, 5, 26), true_dob).years >= 13 and relativedelta(datetime(2023, 5, 26), true_dob).years < 20 else 0
+    # elif is_summer == 1:
+    #     return 1 if relativedelta(datetime(2023, 7, 21), true_dob).years >= 13 and relativedelta(datetime(2023, 7, 21), true_dob).years < 20 else 0
+    # else:
+    #     return 1 if relativedelta(get_last_day(date.today()), true_dob).years >= 13 and relativedelta(get_last_day(date.today()), true_dob).years < 20 else 0
     
 def calc_age(is_term_1, is_summer, dob):
     if pd.isnull(dob):
@@ -45,7 +46,7 @@ def main(pth_in, pth_out, show_blacklist):
     if not pth_out:
         pth_out = os.getcwd()
     df = pd.read_excel(pth_in)
-    units = ['101', '102', '110', '201', '202', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '601', '602', '603', '701', '503', '205', '411']
+    units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '601', '602', '603', '701', '503', '205', '411']
     df = df.loc[:,:'All Groups']
     df['All Groups'] = df['All Groups'].fillna('0')
     df = df[(~df['All Groups'].astype(str).str.contains('301')) & (~df['All Groups'].astype(str).str.contains('000'))]
@@ -104,6 +105,7 @@ def main(pth_in, pth_out, show_blacklist):
                         df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [0], 'is_term_2': [1], 'used_tag': [row['All Groups']]})
                         df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
                         found = True
+                        unit_dict[prefix] = unit_dict[prefix] + 1
                         break
             if b.shape[0] > 0 and found == False:
                 for index, row in b.iterrows():
@@ -112,6 +114,7 @@ def main(pth_in, pth_out, show_blacklist):
                         df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [1], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
                         df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
                         found = True
+                        unit_dict[prefix] = unit_dict[prefix] + 1
                         break
             if c.shape[0] > 0 and found == False:
                 for index, row in c.iterrows():
@@ -120,11 +123,10 @@ def main(pth_in, pth_out, show_blacklist):
                         df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [1], 'is_summer': [0], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
                         df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
                         found = True
+                        unit_dict[prefix] = unit_dict[prefix] + 1
                         break
             if found == False:
                 unsorted.append(cur.iloc[0]['Member Full Name'])
-            else:
-                unit_dict[prefix] = unit_dict[prefix] + 1 
         
     df_no_dups = df.drop_duplicates(subset=['mem_unique'])
     merged = df_no_dups.merge(df_for_merging, on='mem_unique', how='inner')

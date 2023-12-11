@@ -27,6 +27,12 @@ def get_df_for_counting(df):
     df_for_counting = df_for_counting.loc[:, ::2]
     return df_for_counting
 
+def get_df_for_checking(df):
+    df_for_checking = df.loc[:, 'Tags':]
+    df_for_checking = df_for_checking.drop(df_for_checking.columns[[0, 1]], axis=1)
+    df_for_checking = df_for_checking.iloc[:, ::2]
+    return df_for_checking
+
 def read_dates(pth_in):
     #Read source file and parce dates out of row 1
     date_info = pd.read_excel(f'{pth_in}/{os.listdir(pth_in)[0]}', engine='openpyxl')
@@ -38,6 +44,21 @@ def read_dates(pth_in):
     date1 = datetime.fromisoformat(f"{int(date1[2])}-{cal[date1[1].strip(',')]}-{date1[0]}")
     date2 = datetime.fromisoformat(f"{int(date2[2])}-{cal[date2[1].strip(',')]}-{date2[0]}")
     return (date1, date2)
+
+def get_error_count(df):
+    df_for_checking = get_df_for_checking(df)
+    dash_outs = 0
+    bulk_sign_outs = 0
+    for i in range(len(df_for_checking.columns)):
+        col_name = df_for_checking.columns[i]
+        col = df_for_checking.loc[~df_for_checking[col_name].astype(str).str.contains('AM')]
+        dash_outs += col.loc[col[col_name].astype(str).str.contains("--")].shape[0]
+        time_stripped = col.iloc[:, i].astype(str).apply(lambda x: extract_time_from_string(x))
+        dup_check = time_stripped.value_counts()
+        print(dup_check)
+        bulk_sign_outs += dup_check[dup_check >= 10].sum()
+    return (dash_outs, bulk_sign_outs)
+
 
 def generate_ADA(df, pth_in, pth_out, am):
     dates = read_dates(pth_in)
@@ -52,19 +73,28 @@ def generate_ADA(df, pth_in, pth_out, am):
     df2_splitter = df2.groupby(['Site'])
     ada_frames = []
     for group in df2_splitter.groups:
+        weekday_dict = {
+            0: [0, 0],
+            1: [0, 0],
+            2: [0, 0],
+            3: [0, 0],
+            4: [0, 0],
+            5: [0, 0],
+            6: [0, 0], 
+        }
         cur = df2_splitter.get_group(group)
 
         #Calculate average duration of stay
         minute_count_df = cur.loc[cur['Average Time In'] != 0]
         minute_avg = minute_count_df['Average Time In'].mean()
 
-
         days = get_df_for_counting(cur)
         cumulative = 0
         max_day = 0
         min_day = 1000
         off_days = 0
-        indiv_days = []
+        indiv_days = [] 
+        day_of_week = dates[0].weekday()
         for i in range(len(days.columns)):
             #Account for vacation days
             if am and days[days.columns[i]].astype(str).str.count('AM').sum() == 0:
@@ -80,14 +110,29 @@ def generate_ADA(df, pth_in, pth_out, am):
                     num = days[days.columns[i]].count()
                 cumulative = cumulative + num
                 indiv_days.append(num)
+                weekday_dict[day_of_week][0] += num
+                weekday_dict[day_of_week][1] += 1
                 #Check to see if current day is min or max of period total.
                 if num > max_day:
                     max_day = num
                 if num < min_day:
                     min_day = num
+            if day_of_week == 6:
+                day_of_week = 0
+            else:
+                day_of_week += 1
         ada = 0
         if len(days.columns) - off_days > 0:
             ada = cumulative / (len(days.columns) - off_days)
+        weekday_avgs = []
+        for val in weekday_dict.values():
+            if val[1] == 0:
+                weekday_avgs.append(0)
+            else:
+                weekday_avgs.append(val[0] / val[1])
+
+        print(f"Checking Errors for {group}\n\n\n")
+        error_counts = get_error_count(cur)
         
         #Create df from current group and append to combined ADA df.
         data = {
@@ -96,7 +141,14 @@ def generate_ADA(df, pth_in, pth_out, am):
             'Max': [max_day],
             'Min': [min_day],
             'ADA_Std_Dev': [pd.Series(indiv_days).std()],
-            'Average Time In': [minute_avg]
+            'Average Time In': [minute_avg],
+            'Monday Average': [weekday_avgs[0]],
+            'Tuesday Average': [weekday_avgs[1]],
+            'Wednesday Average': [weekday_avgs[2]],
+            'Thursday Average': [weekday_avgs[3]],
+            'Friday Average': [weekday_avgs[4]],
+            'No Sign Outs': [error_counts[0]],
+            'Bulk Sign Outs': [error_counts[1]]
         }
         temp_df = pd.DataFrame(data=data)
         temp_df.set_index('Site', inplace=True)
@@ -107,6 +159,8 @@ def generate_ADA(df, pth_in, pth_out, am):
     exp = (complete, exp_filename)
     return exp
 
+#TODO: make this work with the new error checking methods
+#No Longer should this pre-chop days.
 def generate_weekly_ADA(df, pth_in, pth_out, c, am):
     #make sure that data begins on a monday
     dates = read_dates(pth_in)
@@ -116,26 +170,25 @@ def generate_weekly_ADA(df, pth_in, pth_out, c, am):
         print('\nError: please specify a date range beginning on a Monday')
         return    
     #make sure time frame is at least one complete week
-    df_for_counting = get_df_for_counting(df)
-    if len(df_for_counting.columns) < 7:
+    df_for_counting = df.loc[:, 'Tags':].drop(columns=['Tags'])
+    if len(df_for_counting.columns) < 14:
         print('\nError: For concatenation, please provide at least 7 days of attendance data.')
         return
     #round down into multiple of seven days
-    num_remainder_cols = len(df_for_counting.columns) % 7
+    num_remainder_cols = len(df_for_counting.columns) % 14
     df_complete_weeks = df_for_counting.iloc[:, :len(df_for_counting.columns) - num_remainder_cols]
     #split into each date window
-    mondays = df_complete_weeks.columns.tolist()[::7]
-    sundays = df_complete_weeks.columns.tolist()[6::7]
+    mondays = df_complete_weeks.columns.tolist()[::14]
+    print(mondays)
+    sundays = df_complete_weeks.columns.tolist()[13::14]
     frames = []
     for i in range(len(mondays)):
         #use ADA function
-        print(base_cols.shape)
-        print(df_complete_weeks.shape)
         to_join = df_complete_weeks.loc[:, mondays[i]:sundays[i]]
         to_join = to_join.reset_index(drop=True)
         cur = base_cols.join(to_join)
+        print(f'CHECK----------------------------------\ncolumns = {cur.columns}\n\n\n')
         cur_ada = generate_ADA(cur, pth_in, pth_out, am)[0]
-
         #take std deviation off and add date
         cur_ada = cur_ada.drop(columns=['ADA_Std_Dev'])
         cur_ada['Date'] = dates[0] + timedelta(days=7*i)
