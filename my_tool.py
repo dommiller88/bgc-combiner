@@ -11,7 +11,7 @@ import app.cumulative_count as cumulative_count
 @click.option('--filtered')
 @click.option('--blacklist', is_flag=True)
 @click.option('--am', is_flag=True)
-@click.version_option('1.1.0')
+@click.version_option('1.2.0')
 def main(mode, o, c, filtered, blacklist, am):
     match mode:
         case 'info':
