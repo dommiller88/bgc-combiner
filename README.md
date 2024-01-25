@@ -33,6 +33,12 @@ Enrollment is used for getting the number of enrolled students by site for each 
 bgcombine cumulative --o ~/output --blacklist
 ```
 Cumulative is used for getting a cumulative count of students (by site and total) across a given time frame.  It is designed to be used with Vision data containing "Member Full Name", Membership Number, and All Groups.  The program prints individual unit counts for both general studetns and teen students to the console along with total counts for both of those categories.  In addition, information on both general students and teens will be outputted to an Excel file, including which term the students last attended for as well as the specific location and program of that attendance.  If no output path is specified, the current working directory will be used.
+#### attendance_special
+```bash
+bgcombine attendance_special --o ~/output
+```
+
+Attendance Special is a special use case for attendance in the annual report.  It requires a pre-combined attendance file with an age-banding column based on the requirements of the annual report.  The program will output an ADA report by site by age band.
 
 ### Arguments
 #### input_path
