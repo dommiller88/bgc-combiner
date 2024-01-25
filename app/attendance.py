@@ -2,6 +2,7 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 import re
+import sys
 
 cal = {
     "January": "01",
@@ -55,13 +56,13 @@ def get_error_count(df):
         dash_outs += col.loc[col[col_name].astype(str).str.contains("--")].shape[0]
         time_stripped = col.iloc[:, i].astype(str).apply(lambda x: extract_time_from_string(x))
         dup_check = time_stripped.value_counts()
-        print(dup_check)
         bulk_sign_outs += dup_check[dup_check >= 10].sum()
     return (dash_outs, bulk_sign_outs)
 
 
 def generate_ADA(df, pth_in, pth_out, am):
-    dates = read_dates(pth_in)
+    #dates = read_dates(pth_in)
+    dates = (datetime.now(), datetime.now())
     #filter out am columns or non-am columns based on options passed
     if am:
         df2 = df
@@ -69,6 +70,8 @@ def generate_ADA(df, pth_in, pth_out, am):
         df2 = df.loc[df['is_am'] == False]
 
     #Split rows into groups by Site
+    df2 = df2.loc[df2['Days Attended'] > 0]
+    
     df2 = df2.drop_duplicates(subset=['IdXSite'])
     df2_splitter = df2.groupby(['Site'])
     ada_frames = []
@@ -96,16 +99,19 @@ def generate_ADA(df, pth_in, pth_out, am):
         indiv_days = [] 
         day_of_week = dates[0].weekday()
         for i in range(len(days.columns)):
+            print(f'generating {group} {days.columns[i]}')
             #Account for vacation days
             if am and days[days.columns[i]].astype(str).str.count('AM').sum() == 0:
                 off_days = off_days + 1
-            elif len(days[days.columns[i]].value_counts()) == 0:
+                print("am")
+            elif days[days.columns[i]].isnull().all():
                 off_days = off_days + 1
+                print('off day')
             else:
+                print(f'not off day- count {days[days.columns[i]].count()}')
                 #Add attendance for day to cumulative period total
                 if am:
                     num = days[days.columns[i]].astype(str).str.count('AM').sum()
-                    print(num)
                 else:
                     num = days[days.columns[i]].count()
                 cumulative = cumulative + num
@@ -121,9 +127,11 @@ def generate_ADA(df, pth_in, pth_out, am):
                 day_of_week = 0
             else:
                 day_of_week += 1
+        print(f'CUMULATIVE: {cumulative}\nTOT DAYS: {len(days.columns) - off_days}')
         ada = 0
         if len(days.columns) - off_days > 0:
             ada = cumulative / (len(days.columns) - off_days)
+            print(f'ADA: {ada}')
         weekday_avgs = []
         for val in weekday_dict.values():
             if val[1] == 0:
@@ -131,7 +139,6 @@ def generate_ADA(df, pth_in, pth_out, am):
             else:
                 weekday_avgs.append(val[0] / val[1])
 
-        print(f"Checking Errors for {group}\n\n\n")
         error_counts = get_error_count(cur)
         
         #Create df from current group and append to combined ADA df.
@@ -179,7 +186,6 @@ def generate_weekly_ADA(df, pth_in, pth_out, c, am):
     df_complete_weeks = df_for_counting.iloc[:, :len(df_for_counting.columns) - num_remainder_cols]
     #split into each date window
     mondays = df_complete_weeks.columns.tolist()[::14]
-    print(mondays)
     sundays = df_complete_weeks.columns.tolist()[13::14]
     frames = []
     for i in range(len(mondays)):
@@ -222,7 +228,6 @@ def time_elapse(row):
     total_mins = 0
     day_count = 0
     for i in range(0, len(row), 2):
-        print(row.iloc[i])
         time_in = extract_time_from_string(row.iloc[i])
         time_out = extract_time_from_string(row.iloc[i + 1])
         if time_in and time_out:
@@ -319,14 +324,15 @@ def main(pth_in, pth_out, filtered, c, am):
             df.insert(5, 'is_active', is_active)
             
             frames.append(df)
-    print(len(frames))
-    # if len(frames) == 1:
-    #     combined = frames[0]
-    # else:
-    combined = pd.concat(frames)
+    if len(frames) == 1:
+        combined = frames[0]
+    else:
+        combined = pd.concat(frames)
     
     combined.insert(5, 'Average Time In', average_time_in(combined))
     combined.sort_values(by=['Site', 'First Name']).to_excel(f"{pth_out}/attendance_data_combined-{datetime.today()}.xlsx", index=False)
+
+    # combined = pd.read_excel(pth_in)
     ada = generate_ADA(combined, pth_in, pth_out, am)
     ada[0].to_excel(ada[1])
     if c:

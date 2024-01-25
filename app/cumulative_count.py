@@ -46,7 +46,7 @@ def main(pth_in, pth_out, show_blacklist):
     if not pth_out:
         pth_out = os.getcwd()
     df = pd.read_excel(pth_in)
-    units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '601', '602', '603', '701', '503', '205', '411']
+    units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '504', '601', '602', '603', '701', '503', '205', '411']
     df = df.loc[:,:'All Groups']
     df['All Groups'] = df['All Groups'].fillna('0')
     df = df[(~df['All Groups'].astype(str).str.contains('301')) & (~df['All Groups'].astype(str).str.contains('000'))]
