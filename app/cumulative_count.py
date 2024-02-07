@@ -46,9 +46,11 @@ def main(pth_in, pth_out, show_blacklist):
     if not pth_out:
         pth_out = os.getcwd()
     df = pd.read_excel(pth_in)
+    #Whitelist for lily counting
     units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '504', '601', '602', '603', '701', '503', '205', '411']
     df = df.loc[:,:'All Groups']
     df['All Groups'] = df['All Groups'].fillna('0')
+    #Disclude 301 and 000
     df = df[(~df['All Groups'].astype(str).str.contains('301')) & (~df['All Groups'].astype(str).str.contains('000'))]
     df['mem_unique'] = df['Membership Number'].astype(str) + df['Member Full Name']
     grps = df.groupby(['mem_unique'])
@@ -61,6 +63,7 @@ def main(pth_in, pth_out, show_blacklist):
         prefix = None
         cur = grps.get_group(x)
         white_check = cur.loc[cur['Unit'] == 701]
+        #White county requires special tagging. Use last dates attended to auto-tag
         if white_check.shape[0] > 0:
             a = cur.loc[(cur['Last Date Attended in Range'] >= datetime(2023, 8, 1)) | 
                         (cur['Entry Date (Latest)'] >= datetime(2023, 7, 28)) | 
@@ -94,6 +97,7 @@ def main(pth_in, pth_out, show_blacklist):
             if prefix != None:
                 unit_dict['701'] = unit_dict['701'] + 1
         else:
+            #Normal tagging process. Can be updated. Reads tags to see most recently tagged program
             a = cur.loc[cur['All Groups'].str.contains('24')]
             b = cur.loc[cur['All Groups'].str.contains('Summer') & (cur['All Groups'].str.contains('23'))]
             c = cur.loc[(cur['All Groups'].str.contains('22')) & (cur['All Groups'].str.contains('23'))]
@@ -139,6 +143,7 @@ def main(pth_in, pth_out, show_blacklist):
     pprint(unit_dict)
     print(f'\nTotal: {counted_students}') 
 
+    #Show unsorted members if option is selected
     if show_blacklist:
         print('Members not shown: \n')
         pprint(unsorted)
@@ -147,7 +152,6 @@ def main(pth_in, pth_out, show_blacklist):
 
 
     
-
     merged['is_teen'] = merged.apply(lambda x: is_teen(x['is_term_1'], x['is_summer'], x['Date of Birth (Member)']), axis=1)
     merged['age_as_of_last_term_attended'] = merged.apply(lambda x: calc_age(x['is_term_1'], x['is_summer'], x['Date of Birth (Member)']), axis=1)
     merged.to_excel(f'{pth_out}/cumulative_count_{datetime.now()}.xlsx')
@@ -157,6 +161,7 @@ def main(pth_in, pth_out, show_blacklist):
 
     unit_dict_teens = dict.fromkeys(units, 0)
     unsorted = []
+    #Do a teen head count
     for x in grps.groups:
         cur = grps.get_group(x)
         if cur.iloc[0]['used_tag'][:3] in unit_dict_teens:

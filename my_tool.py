@@ -12,15 +12,16 @@ import app.attendance_special as attendance_special
 @click.option('--filtered')
 @click.option('--blacklist', is_flag=True)
 @click.option('--am', is_flag=True)
-@click.version_option('1.2.1')
-def main(mode, o, c, filtered, blacklist, am):
+@click.option('--zc')
+@click.version_option('1.2.2')
+def main(mode, o, c, filtered, blacklist, am, zc):
     match mode:
         case 'info':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to child and family data input folder")
             info.main(pth_in, o)
         case 'attendance':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to attendance data input folder")
-            attendance.main(pth_in, o, filtered, c, am)
+            attendance.main(pth_in, o, filtered, c, am, zc)
         case 'enrollment':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to enrollment student list file")
             enrollment.main(pth_in, o)

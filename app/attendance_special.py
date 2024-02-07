@@ -71,7 +71,7 @@ def generate_ADA(df, pth_in, pth_out, am):
 
     #Split rows into groups by Site
     # df2 = df2.drop_duplicates(subset=['IdXSite'])
-    df2_splitter = df2.groupby(['Site', 'Age Band'])
+    df2_splitter = df2.groupby(['Site', 'Age'])
     sites_only_splitter = df2.groupby(['Site'])
     ada_frames = []
     for group in df2_splitter.groups:

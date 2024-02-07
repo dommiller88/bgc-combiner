@@ -50,10 +50,13 @@ def get_error_count(df):
     df_for_checking = get_df_for_checking(df)
     dash_outs = 0
     bulk_sign_outs = 0
+
     for i in range(len(df_for_checking.columns)):
         col_name = df_for_checking.columns[i]
         col = df_for_checking.loc[~df_for_checking[col_name].astype(str).str.contains('AM')]
+        #checks sign outs for "--", representing no sign out
         dash_outs += col.loc[col[col_name].astype(str).str.contains("--")].shape[0]
+        #Checking if the same sign out was used more than 10 times.  Represents bulk sign out.
         time_stripped = col.iloc[:, i].astype(str).apply(lambda x: extract_time_from_string(x))
         dup_check = time_stripped.value_counts()
         bulk_sign_outs += dup_check[dup_check >= 10].sum()
@@ -251,9 +254,11 @@ def count_zeroes(df, pth_in, pth_out):
     dates = read_dates(pth_in)
     zero_cnt = df.loc[df['Days Attended'] == 0, :'Tags']
     zero_cnt['Date'] = dates[0]
-    zero_cnt.sort_values('Site').to_excel(f'{pth_out}/zero_attendance-{dates[0]}-{dates[1]}.xlsx', index=False)
+    zero_sort = zero_cnt.sort_values('Site')
+    zero_sort.to_excel(f'{pth_out}/zero_attendance-{dates[0]}-{dates[1]}.xlsx', index=False)
+    return zero_sort
 
-def main(pth_in, pth_out, filtered, c, am):
+def main(pth_in, pth_out, filtered, c, am, zc):
     if not pth_out:
         pth_out = os.getcwd()
     frames = []
@@ -337,7 +342,10 @@ def main(pth_in, pth_out, filtered, c, am):
     ada[0].to_excel(ada[1])
     if c:
         generate_weekly_ADA(combined, pth_in, pth_out, c, am)
-    count_zeroes(combined, pth_in, pth_out)
+    zeroes = count_zeroes(combined, pth_in, pth_out)
+    if zc:
+        prev_doc = pd.read_excel(zc).reset_index(drop=True)
+        pd.concat([prev_doc, zeroes.astype(prev_doc.dtypes)], axis=0).to_excel(zc, index=False)
 
 
 if __name__ == "__main__":
