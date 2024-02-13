@@ -7,6 +7,7 @@ import os
 import numpy as np
 from dateutil.relativedelta import relativedelta
 from pprint import pprint
+import yaml
 
 def get_last_day(dt):
     first = dt.replace(day=1)
@@ -24,6 +25,7 @@ def is_teen(is_term_1, is_summer, dob):
         return 0
     true_dob = datetime.strptime(str(dob), "%Y-%m-%d %H:%M:%S")
     return 1 if relativedelta(get_last_day(date.today()), true_dob).years >= 13 and relativedelta(get_last_day(date.today()), true_dob).years < 20 else 0
+    #Code below for "dynamic age". Turn this on instead of the line above to calculate age based on which term a student last attended.
     # if is_term_1 == 1:
     #     return 1 if relativedelta(datetime(2023, 5, 26), true_dob).years >= 13 and relativedelta(datetime(2023, 5, 26), true_dob).years < 20 else 0
     # elif is_summer == 1:
@@ -31,23 +33,35 @@ def is_teen(is_term_1, is_summer, dob):
     # else:
     #     return 1 if relativedelta(get_last_day(date.today()), true_dob).years >= 13 and relativedelta(get_last_day(date.today()), true_dob).years < 20 else 0
     
-def calc_age(is_term_1, is_summer, dob):
+def calc_age(is_term_1, is_summer, is_term_2, dob, settings):
     if pd.isnull(dob):
         return np.nan 
+    split_date_1 = settings['config']['end_dates']['term_1'].split('-')
+    split_date_summer = settings['config']['end_dates']['summer'].split('-')
+    split_date_2 = settings['config']['end_dates']['term_2'].split('-')
     true_dob = datetime.strptime(str(dob), "%Y-%m-%d %H:%M:%S")
-    if is_term_1 == 1:
-        return relativedelta(datetime(2023, 5, 26), true_dob).years
-    elif is_summer == 1:
-        return relativedelta(datetime(2023, 7, 21), true_dob).years
+    if is_term_1 == 1 and settings['config']['current_year'] != 1:
+        return relativedelta(datetime(int(split_date_1[0]), int(split_date_1[1]), int(split_date_1[2])), true_dob).years
+    elif is_summer == 1 and settings['config']['current_year'] != 2:
+        return relativedelta(datetime(int(split_date_summer[0]), int(split_date_summer[1]), int(split_date_summer[2])), true_dob).years
+    elif is_term_2 == 1 and settings['config']['current_year'] != 3:
+        return relativedelta(datetime(int(split_date_2[0]), int(split_date_2[1]), int(split_date_2[2])), true_dob).years
     else:
         return relativedelta(get_last_day(date.today()), true_dob).years
+    
 
-def main(pth_in, pth_out, show_blacklist):
+#TODO: add tiebreaker function for students with 2+ sites in the current term.
+def main(pth_in, pth_out, show_blacklist, config):
+    if not config:
+        print("No config file specified. Please pass the path to a config.yaml file by using the --config option.")
+        return
+    settings = yaml.safe_load(open(config))
     if not pth_out:
         pth_out = os.getcwd()
     df = pd.read_excel(pth_in)
     #Whitelist for lily counting
-    units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '504', '601', '602', '603', '701', '503', '205', '411']
+    units = settings['config']['units']
+    #units = ['101', '102', '110', '201', '202', '204', '303', '304', '305', '306', '307', '308', '401', '402', '403', '404', '405', '406', '407', '501', '502', '504', '601', '602', '603', '701', '503', '205', '411']
     df = df.loc[:,:'All Groups']
     df['All Groups'] = df['All Groups'].fillna('0')
     #Disclude 301 and 000
@@ -59,78 +73,45 @@ def main(pth_in, pth_out, show_blacklist):
     unit_dict = dict.fromkeys(units, 0)
     unsorted = []
     df_for_merging = pd.DataFrame(columns=['mem_unique', 'is_term_1', 'is_summer', 'is_term_2', 'used_tag'])
+    year_no = settings['config']['current_year'][-2:]
     for x in grps.groups:
         prefix = None
         cur = grps.get_group(x)
-        white_check = cur.loc[cur['Unit'] == 701]
-        #White county requires special tagging. Use last dates attended to auto-tag
-        if white_check.shape[0] > 0:
-            a = cur.loc[(cur['Last Date Attended in Range'] >= datetime(2023, 8, 1)) | 
-                        (cur['Entry Date (Latest)'] >= datetime(2023, 7, 28)) | 
-                        (cur['Entry Date (First)'] >= datetime(2023, 7, 28))]
-            
-            b = cur.loc[(cur['Last Date Attended in Range'] >= datetime(2023, 6, 6)) | 
-                        (cur['Entry Date (Latest)'] >= datetime(2023, 5, 29)) | 
-                        (cur['Entry Date (First)'] >= datetime(2023, 5, 29))]
-            
-            c = cur.loc[(cur['Last Date Attended in Range'] < datetime(2023, 6, 6)) | 
-                        (cur['Entry Date (Latest)'] < datetime(2023, 5, 29)) | 
-                        (cur['Entry Date (First)'] < datetime(2023, 5, 29))]
-            if a.shape[0] > 0:
-                selected = a.iloc[0]
-                prefix = selected['All Groups'][:3]
-                df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [0], 'is_term_2': [1], 'used_tag': ['701 -- STRIVE White County 23/24']})
-                df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-            elif b.shape[0] > 0:
-                selected = b.iloc[0]
-                prefix = selected['All Groups'][:3]
-                df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [1], 'is_term_2': [0], 'used_tag': ['701 -- Summer White County 2023']})
-                df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-            elif c.shape[0] > 0:
-                selected = c.iloc[0]
-                prefix = selected['All Groups'][:3]
-                df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [1], 'is_summer': [0], 'is_term_2': [0], 'used_tag': ['701 -- STRIVE White County 22/23']})
-                df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-            else:
-                print('white not found')
-                unsorted.append(cur.iloc[0]['Member Full Name'])
-            if prefix != None:
-                unit_dict['701'] = unit_dict['701'] + 1
-        else:
-            #Normal tagging process. Can be updated. Reads tags to see most recently tagged program
-            a = cur.loc[cur['All Groups'].str.contains('24')]
-            b = cur.loc[cur['All Groups'].str.contains('Summer') & (cur['All Groups'].str.contains('23'))]
-            c = cur.loc[(cur['All Groups'].str.contains('22')) & (cur['All Groups'].str.contains('23'))]
-            found = False
-            if a.shape[0] > 0:
-                for index, row in a.iterrows():
-                    if row['All Groups'][:3] in unit_dict:
-                        prefix = row['All Groups'][:3]
-                        df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [0], 'is_term_2': [1], 'used_tag': [row['All Groups']]})
-                        df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-                        found = True
-                        unit_dict[prefix] = unit_dict[prefix] + 1
-                        break
-            if b.shape[0] > 0 and found == False:
-                for index, row in b.iterrows():
-                    if row['All Groups'][:3] in unit_dict:
-                        prefix = row['All Groups'][:3]
-                        df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [1], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
-                        df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-                        found = True
-                        unit_dict[prefix] = unit_dict[prefix] + 1
-                        break
-            if c.shape[0] > 0 and found == False:
-                for index, row in c.iterrows():
-                    if row['All Groups'][:3] in unit_dict: 
-                        prefix = row['All Groups'][:3]
-                        df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [1], 'is_summer': [0], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
-                        df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
-                        found = True
-                        unit_dict[prefix] = unit_dict[prefix] + 1
-                        break
-            if found == False:
-                unsorted.append(cur.iloc[0]['Member Full Name'])
+        
+        #Normal tagging process. Can be updated. Reads tags to see most recently tagged program
+        a = cur.loc[cur['All Groups'].str.contains(str(int(year_no) + 1))]
+        b = cur.loc[cur['All Groups'].str.contains('Summer') & (cur['All Groups'].str.contains(year_no))]
+        c = cur.loc[(cur['All Groups'].str.contains(str(int(year_no) - 1))) & (cur['All Groups'].str.contains(year_no))]
+        found = False
+        if a.shape[0] > 0:
+            for index, row in a.iterrows():
+                if (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] != 3) or (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] == 3 and row['All Groups'][:3] == str(row['Unit'])):
+                    prefix = row['All Groups'][:3]
+                    df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [0], 'is_term_2': [1], 'used_tag': [row['All Groups']]})
+                    df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
+                    found = True
+                    unit_dict[prefix] = unit_dict[prefix] + 1
+                    break
+        if b.shape[0] > 0 and found == False:
+            for index, row in b.iterrows():
+                if (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] != 2) or (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] == 2 and row['All Groups'][:3] == str(row['Unit'])):
+                    prefix = row['All Groups'][:3]
+                    df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [0], 'is_summer': [1], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
+                    df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
+                    found = True
+                    unit_dict[prefix] = unit_dict[prefix] + 1
+                    break
+        if c.shape[0] > 0 and found == False:
+            for index, row in c.iterrows():
+                if (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] != 1) or (row['All Groups'][:3] in unit_dict and settings['config']['current_term'] == 1 and row['All Groups'][:3] == str(row['Unit'])): 
+                    prefix = row['All Groups'][:3]
+                    df_temp = pd.DataFrame(data={'mem_unique': [x], 'is_term_1': [1], 'is_summer': [0], 'is_term_2': [0], 'used_tag': [row['All Groups']]})
+                    df_for_merging = pd.concat([df_for_merging, df_temp], ignore_index=True)
+                    found = True
+                    unit_dict[prefix] = unit_dict[prefix] + 1
+                    break
+        if found == False:
+            unsorted.append(cur.iloc[0]['Member Full Name'])
         
     df_no_dups = df.drop_duplicates(subset=['mem_unique'])
     merged = df_no_dups.merge(df_for_merging, on='mem_unique', how='inner')
@@ -153,7 +134,7 @@ def main(pth_in, pth_out, show_blacklist):
 
     
     merged['is_teen'] = merged.apply(lambda x: is_teen(x['is_term_1'], x['is_summer'], x['Date of Birth (Member)']), axis=1)
-    merged['age_as_of_last_term_attended'] = merged.apply(lambda x: calc_age(x['is_term_1'], x['is_summer'], x['Date of Birth (Member)']), axis=1)
+    merged['age_as_of_last_term_attended'] = merged.apply(lambda x: calc_age(x['is_term_1'], x['is_summer'], x['is_term_2'], x['Date of Birth (Member)'], settings), axis=1)
     merged.to_excel(f'{pth_out}/cumulative_count_{datetime.now()}.xlsx')
 
     df_teens = merged.loc[merged['is_teen'] == 1]

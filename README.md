@@ -30,9 +30,9 @@ bgcombine enrollment --o ~/output
 Enrollment is used for getting the number of enrolled students by site for each site.  Any vision file may be used for this as long as it includes the fields Unit Code and Membership Number. Results are output to the console. If an output path is specified, the result will also be output to an Excel spreadsheet in the intended location.
 #### Cumulative
 ```bash
-bgcombine cumulative --o ~/output --blacklist
+bgcombine cumulative --o ~/output --config ~/pth/to/config --blacklist
 ```
-Cumulative is used for getting a cumulative count of students (by site and total) across a given time frame.  It is designed to be used with Vision data containing "Member Full Name", Membership Number, and All Groups.  The program prints individual unit counts for both general studetns and teen students to the console along with total counts for both of those categories.  In addition, information on both general students and teens will be outputted to an Excel file, including which term the students last attended for as well as the specific location and program of that attendance.  If no output path is specified, the current working directory will be used.
+Cumulative is used for getting a cumulative count of students (by site and total) across a given time frame.  It is designed to be used with Vision data containing "Member Full Name", Membership Number, Date of Birth(Member), and All Groups.  The user must also use the --config option, which is a path to a .yaml file specifying certain date-specific options for the script (see the example config_example.yaml file).  The program prints individual unit counts for both general studetns and teen students to the console along with total counts for both of those categories.  In addition, information on both general students and teens will be outputted to an Excel file, including which term the students last attended for as well as the specific location and program of that attendance.  If no output path is specified, the current working directory will be used.
 #### attendance_special
 ```bash
 bgcombine attendance_special --o ~/output
@@ -53,6 +53,8 @@ User should input the **absolute** path to a directory that holds all of the Pro
 Option used for attendance command.  By default, before-care only members are not included in ADA.  This flag can be used to get ADA specifically for before-care.
 #### Output Unsorted Members (--blacklist)
 Option for use in the cumulative command.  List of unsorted members will be output to console and to a file in the specified output directory.
+#### Pass Configuration File (--config)
+Required option for use in the cumulative command.  Provides a path to a .yaml file that will give important date-related options to the program.  See the config_example.yaml file for an example.
 #### Concatenate (--c)
 Concatenate is an option used to append ADA data to an existing document along with datestamps of when that info was generated.  Its argument is the path to the file that should be concatenated.
 #### Zero Concatenate (--zc)

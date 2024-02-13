@@ -13,8 +13,9 @@ import app.attendance_special as attendance_special
 @click.option('--blacklist', is_flag=True)
 @click.option('--am', is_flag=True)
 @click.option('--zc')
-@click.version_option('1.2.2')
-def main(mode, o, c, filtered, blacklist, am, zc):
+@click.option('--config')
+@click.version_option('1.2.3')
+def main(mode, o, c, filtered, blacklist, am, zc, config):
     match mode:
         case 'info':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to child and family data input folder")
@@ -27,7 +28,7 @@ def main(mode, o, c, filtered, blacklist, am, zc):
             enrollment.main(pth_in, o)
         case 'cumulative':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to enrollment student list file")
-            cumulative_count.main(pth_in, o, blacklist)
+            cumulative_count.main(pth_in, o, blacklist, config)
         case 'attendance_special':
             pth_in = click.prompt("\n--------------------------------------------------\nenter path to attendance data input folder")
             attendance_special.main(pth_in, o, filtered, c, am)
