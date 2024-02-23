@@ -1,7 +1,7 @@
 
 # BGCombine
 BGCombine is a tool for transforming and combining data from ProCare and Vision.  This can be used for individual reports, aggregate ADA data, and concatenating aggregate data on to existing documents as well as for monthly Lily cumulative enrollment counts.
-
+Dave was here and now it smells
 ## Installation
 
 This program is designed to run on Linux, MacOs, and Windows Subsystem for Linux.
