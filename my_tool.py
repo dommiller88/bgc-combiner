@@ -14,7 +14,7 @@ import app.attendance_special as attendance_special
 @click.option('--am', is_flag=True)
 @click.option('--zc')
 @click.option('--config')
-@click.version_option('1.2.9')
+@click.version_option('1.2.10')
 def main(mode, o, c, filtered, blacklist, am, zc, config):
     match mode:
         case 'info':

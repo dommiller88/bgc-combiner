@@ -8,7 +8,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name = 'bgcombine',
-    version = '1.2.9',
+    version = '1.2.10',
     author = 'Dominic Miller',
     author_email = 'dommiller88@gmail.com',
     license = 'MIT',

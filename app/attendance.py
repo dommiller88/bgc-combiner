@@ -64,8 +64,8 @@ def get_error_count(df):
 
 
 def generate_ADA(df, pth_in, pth_out, am):
-    #dates = read_dates(pth_in)
-    dates = (datetime.now(), datetime.now())
+    dates = read_dates(pth_in)
+    # dates = (datetime.now(), datetime.now())
     #filter out am columns or non-am columns based on options passed
     if am:
         df2 = df
